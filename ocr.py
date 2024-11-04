@@ -14,16 +14,11 @@ def to_grayscale(image, inv=False):
         image = ImageOps.invert(image)
     return image
 
-def to_rgb(image):
-    image_array = np.asarray(image)
-    return np.array([[(val, val, val) for val in row] for row in image_array])
-
 def correlation(whole_image, searched_image):
     image_width, image_height = whole_image.size
     result = ifft2(fft2(whole_image) * fft2(rot90(rot90(searched_image)), s=(image_height, image_width))).real
     result /= np.abs(np.max(result))
     return result
-
 
 def highlight_pattern(np_image_array, corr, certainty, highlight_size, pattern_name, locations):
 
@@ -36,15 +31,14 @@ def highlight_pattern(np_image_array, corr, certainty, highlight_size, pattern_n
         for x in range(corr.shape[1]):
             if corr[y, x] > certainty and y != 0:
                 found_locations.append((y, x))
-                if y < 1000:
-                    locations.append((pattern_name, x, y, corr[y, x]))
+                locations.append((pattern_name, x, y, corr[y, x]))
 
 
     for y, x in found_locations:
         top_left = (x - abs(highlight_size[0]) // 2, y - abs(highlight_size[1]) // 2)
         bottom_right = (x + abs(highlight_size[0]) // 2, y + abs(highlight_size[1]) // 2)
 
-        cv2.rectangle(np_image_array, top_left, bottom_right, (0, 0, 255), 2)
+        cv2.rectangle(np_image_array, top_left, bottom_right, (0, 0, 0), 2)
 
         max_height = y
         max_width = x
@@ -62,46 +56,33 @@ def highlight_pattern(np_image_array, corr, certainty, highlight_size, pattern_n
 
     cv2.imwrite("overlayed_image.png", new_np_image_array)
 
+def detect_space(locations):
 
-def add_alphabet(top_image, bottom_image):
-    top_image_cropped = top_image[2:-2, 2:-2]
+    xses = []
 
-    cv2.imwrite('bottom.png', top_image_cropped)
+    for _, x, y, _ in locations:
+        xses.append(x)
 
-    top_height, top_width, _ = top_image_cropped.shape
-    bottom_height, bottom_width, _ = bottom_image.shape
+    for i in range(len(xses)-1):
 
-    new_width = max(top_width, bottom_width)
-    new_height = top_height + bottom_height
+        type, _, _, _ = locations[i+1]
+        filename = "font/" + type + ".png"
+        pattern_size = to_grayscale(image=Image.open(os.path.join(filename)), inv=True).size
 
-    result = np.ones((new_height, new_width, 3), dtype=np.uint8) * 255
-
-    top_x_offset = (new_width - top_width) // 2
-
-    result[:top_height, top_x_offset:top_x_offset + top_width] = top_image_cropped
-
-    bottom_x_offset = (new_width - bottom_width) // 2
-
-    # result[top_height:top_height + bottom_height, bottom_x_offset:bottom_x_offset + bottom_width] = bottom_image
-
-    # blurred = cv2.GaussianBlur(result, (9, 9), 10)
-
-    # result = cv2.addWeighted(result, 1.5, blurred, -0.5, 0)
-
-    cv2.imwrite('result.png', result)
-
-    print("Top image cropped shape:", top_image_cropped.shape)
-    print("Bottom image shape:", bottom_image.shape)
-    print("Resulting image shape:", result.shape)
-
+        if xses[i+1] - xses[i] - pattern_size[0] > 0:
+            locations.append((' ', xses[i+1]-pattern_size[0], 0, 1))
 
 locations = []
 
-whole_in_grey = to_grayscale(image=Image.open(os.path.join("images/longer.png")), inv=True)
+whole_in_grey = np.array(to_grayscale(image=Image.open(os.path.join("images/otto.png")), inv=True))
 
-alphabet_best = ['r', 'a', 'b', 'd', 'e', 'f', 'g', 'k', 'p', 'q', 's', 't', 'w', 'x', 'y', 'z', 'c', 'v', 'h', 'l', 'm', 'n', 'u', 'o', 'i']
+alphabet = np.array(to_grayscale(image=Image.open(os.path.join("alphabet_27.png")), inv=True))
 
-cv2.imwrite("overlayed_image.png", np.asarray(whole_in_grey))
+combined_image = cv2.vconcat([whole_in_grey, alphabet])
+
+cv2.imwrite("overlayed_image.png", combined_image)
+
+alphabet_best = ['r', 'a', 'b', 'd', 'e', 'f', 'g', 'k', 'p', 'q', 's', 't', 'w', 'x', 'y', 'z', 'c', 'v', 'h', 'l', 'm', 'n', 'u', 'o', 'j', 'i']
 
 for char in alphabet_best:
 
@@ -111,7 +92,7 @@ for char in alphabet_best:
 
     pattern = to_grayscale(image=Image.open(os.path.join(filename)), inv=True)
 
-    if char == 'i':
+    if char == 'j':
         a=1
 
     if char == 'f':
@@ -145,43 +126,18 @@ for char in alphabet_best:
 
 locations.sort(key=lambda x: x[1])
 
+# Usuwa litery wykryte z doklejonego alfabetu
 for tup in locations[:]:
     _, _, y, _ = tup
     if y > 40:
         locations.remove(tup)
 
-print(locations)
-
-string = ""
-
-for name, _, _, _ in locations:
-    string += name
-
-print(string)
-
-def detect_space(locations):
-
-    xses = []
-
-    for _, x, y, _ in locations:
-        xses.append(x)
-
-    for i in range(len(xses)-1):
-
-        type, _, _, _ = locations[i+1]
-        filename = "font/" + type + ".png"
-        pattern_size = to_grayscale(image=Image.open(os.path.join(filename)), inv=True).size
-
-        if xses[i+1] - xses[i] - pattern_size[0] > 0:
-            locations.append((' ', xses[i+1]-pattern_size[0], 0, 1))
-
+# Wykrywa i dokleja spacje
 detect_space(locations)
-
 locations.sort(key=lambda x: x[1])
 
+# Printuje napis końcowy
 string = ""
-
 for name, _, _, _ in locations:
     string += name
-
 print(string)
