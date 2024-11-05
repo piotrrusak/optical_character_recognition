@@ -72,72 +72,84 @@ def detect_space(locations):
         if xses[i+1] - xses[i] - pattern_size[0] > 0:
             locations.append((' ', xses[i+1]-pattern_size[0], 0, 1))
 
-locations = []
+def ocr(ocr_filename, inv):
 
-whole_in_grey = np.array(to_grayscale(image=Image.open(os.path.join("images/otto.png")), inv=True))
+    locations = []
 
-alphabet = np.array(to_grayscale(image=Image.open(os.path.join("alphabet_27.png")), inv=True))
+    whole_in_grey = np.array(to_grayscale(image=Image.open(os.path.join(ocr_filename)), inv=inv))
 
-combined_image = cv2.vconcat([whole_in_grey, alphabet])
+    alphabet = np.array(to_grayscale(image=Image.open(os.path.join("alphabet_27.png")), inv=True))
 
-cv2.imwrite("overlayed_image.png", combined_image)
+    combined_image = cv2.vconcat([whole_in_grey, alphabet])
 
-alphabet_best = ['r', 'a', 'b', 'd', 'e', 'f', 'g', 'k', 'p', 'q', 's', 't', 'w', 'x', 'y', 'z', 'c', 'v', 'h', 'l', 'm', 'n', 'u', 'o', 'j', 'i']
+    cv2.imwrite("overlayed_image.png", combined_image)
 
-for char in alphabet_best:
+    alphabet_best = ['r', 'a', 'b', 'd', 'e', 'f', 'g', 'k', 'p', 'q', 's', 't', 'w', 'x', 'y', 'z', 'c', 'v', 'h', 'l', 'm', 'n', 'u', 'o', 'j', 'i']
 
-    whole = Image.open(os.path.join("overlayed_image.png"))
+    for char in alphabet_best:
 
-    filename = "font/" + char + ".png"
+        whole = Image.open(os.path.join("overlayed_image.png"))
 
-    pattern = to_grayscale(image=Image.open(os.path.join(filename)), inv=True)
+        filename = "font/" + char + ".png"
 
-    if char == 'j':
-        a=1
+        pattern = to_grayscale(image=Image.open(os.path.join(filename)), inv=True)
 
-    if char == 'f':
-        highlight_pattern(np_image_array=np.asarray(whole),
-                          corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=0.92,
-                          highlight_size=(8, 8), pattern_name=char, locations=locations)
-    elif char == 's':
-        highlight_pattern(np_image_array=np.asarray(whole),
-                          corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=0.87,
-                          highlight_size=(8, 8), pattern_name=char, locations=locations)
-    elif char == 'i':
-        highlight_pattern(np_image_array=np.asarray(whole),
-                          corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=0.88,
-                          highlight_size=(8, 8), pattern_name=char, locations=locations)
-    elif char == 'm':
-        highlight_pattern(np_image_array=np.asarray(whole),
-                          corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=0.95,
-                          highlight_size=(8, 8), pattern_name=char, locations=locations)
-    elif char == 'v':
-        highlight_pattern(np_image_array=np.asarray(whole),
-                          corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=0.89,
-                          highlight_size=(8, 8), pattern_name=char, locations=locations)
-    elif char == 'y':
-        highlight_pattern(np_image_array=np.asarray(whole),
-                          corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=0.90,
-                          highlight_size=(8, 8), pattern_name=char, locations=locations)
-    else:
-        highlight_pattern(np_image_array=np.asarray(whole),
-                          corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=0.93,
-                          highlight_size=(8, 8), pattern_name=char, locations=locations)
+        if char == 'g' or char == 'f':
+            a = 1
 
-locations.sort(key=lambda x: x[1])
+        if char == 'f':
+            highlight_pattern(np_image_array=np.asarray(whole),
+                              corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=0.92,
+                              highlight_size=(8, 8), pattern_name=char, locations=locations)
+        elif char == 'l':
+            highlight_pattern(np_image_array=np.asarray(whole),
+                              corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=0.90,
+                              highlight_size=(8, 8), pattern_name=char, locations=locations)
+        elif char == 'i':
+            highlight_pattern(np_image_array=np.asarray(whole),
+                              corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=0.95,
+                              highlight_size=(8, 8), pattern_name=char, locations=locations)
+        elif char == 't':
+            highlight_pattern(np_image_array=np.asarray(whole),
+                              corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=0.95,
+                              highlight_size=(8, 8), pattern_name=char, locations=locations)
+        elif char == 's':
+            highlight_pattern(np_image_array=np.asarray(whole),
+                              corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=0.87,
+                              highlight_size=(8, 8), pattern_name=char, locations=locations)
+        elif char == 'm':
+            highlight_pattern(np_image_array=np.asarray(whole),
+                              corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=0.95,
+                              highlight_size=(8, 8), pattern_name=char, locations=locations)
+        elif char == 'v':
+            highlight_pattern(np_image_array=np.asarray(whole),
+                              corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=0.89,
+                              highlight_size=(8, 8), pattern_name=char, locations=locations)
+        elif char == 'y':
+            highlight_pattern(np_image_array=np.asarray(whole),
+                              corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=0.90,
+                              highlight_size=(8, 8), pattern_name=char, locations=locations)
+        else:
+            highlight_pattern(np_image_array=np.asarray(whole),
+                              corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=0.93,
+                              highlight_size=(8, 8), pattern_name=char, locations=locations)
 
-# Usuwa litery wykryte z doklejonego alfabetu
-for tup in locations[:]:
-    _, _, y, _ = tup
-    if y > 40:
-        locations.remove(tup)
+    locations.sort(key=lambda x: x[1])
 
-# Wykrywa i dokleja spacje
-detect_space(locations)
-locations.sort(key=lambda x: x[1])
+    # Usuwa litery wykryte z doklejonego alfabetu
+    for tup in locations[:]:
+        _, _, y, _ = tup
+        if y > 40:
+            locations.remove(tup)
 
-# Printuje napis końcowy
-string = ""
-for name, _, _, _ in locations:
-    string += name
-print(string)
+    # Wykrywa i dokleja spacje
+    detect_space(locations)
+    locations.sort(key=lambda x: x[1])
+
+    # Printuje napis końcowy
+    string = ""
+    for name, _, _, _ in locations:
+        string += name
+    print(string)
+
+# ocr("images/edison.png", inv=True)
