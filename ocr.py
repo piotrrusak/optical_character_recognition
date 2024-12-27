@@ -8,7 +8,7 @@ from numpy.fft import fft2, ifft2
 from PIL import Image, ImageOps
 
 def to_grayscale(image, inv=False):
-    if image.mode != 'L':  # 'L' stands for grayscale
+    if image.mode != 'L':
         image = image.convert('L')
     if inv:
         image = ImageOps.invert(image)
@@ -136,20 +136,15 @@ def ocr(ocr_filename, inv):
 
     locations.sort(key=lambda x: x[1])
 
-    # Usuwa litery wykryte z doklejonego alfabetu
     for tup in locations[:]:
         _, _, y, _ = tup
         if y > 40:
             locations.remove(tup)
 
-    # Wykrywa i dokleja spacje
     detect_space(locations)
     locations.sort(key=lambda x: x[1])
 
-    # Printuje napis końcowy
     string = ""
     for name, _, _, _ in locations:
         string += name
     print(string)
-
-# ocr("images/edison.png", inv=True)

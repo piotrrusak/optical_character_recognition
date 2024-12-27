@@ -1,5 +1,3 @@
-from tabnanny import check
-
 import cv2
 import os
 from PIL import Image, ImageOps
@@ -8,7 +6,7 @@ import numpy as np
 import ocr
 
 def to_grayscale(image, inv=False):
-    if image.mode != 'L':  # 'L' stands for grayscale
+    if image.mode != 'L':
         image = image.convert('L')
     if inv:
         image = ImageOps.invert(image)
@@ -30,7 +28,7 @@ def chop_off_the_line(np_array_image):
 
 lines = 0
 
-def chop_all_lines(np_array_image, lines):
+def chop_all_lines(np_array_image):
     i = 0
     if check_if_line_starts(np_array_image):
         chopped_line, rest_of_image = chop_off_the_line(np_array_image)
@@ -55,12 +53,7 @@ def chop_all_lines(np_array_image, lines):
 
     return lines
 
-image = Image.open(os.path.join("images/otto.png"))
-
-# chopped_line, rest_of_image = chop_off_the_line(np.asarray(to_grayscale(image, inv=True)))
-#
-# cv2.imwrite("chopped.png", chopped_line)
-# cv2.imwrite("rest.png", rest_of_image)
+image = Image.open(os.path.join("images/luther_king.png"))
 
 lines = chop_all_lines(np.asarray(to_grayscale(image, inv=True)), lines)
 
