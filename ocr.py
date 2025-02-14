@@ -3,27 +3,29 @@ from copy import copy
 import cv2
 import os
 import numpy as np
-from numpy import rot90
-from numpy.fft import fft2, ifft2
-from PIL import Image, ImageOps
 
 def to_grayscale(image, inv=False):
-    if image.mode != 'L':
-        image = image.convert('L')
+
+    if len(image.shape) == 2:
+        gray_image = image
+    else:
+        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
     if inv:
-        image = ImageOps.invert(image)
-    return image
+        gray_image = 255 - gray_image
+
+    return gray_image
 
 def correlation(whole_image, searched_image):
-    image_width, image_height = whole_image.size
-    result = ifft2(fft2(whole_image) * fft2(rot90(rot90(searched_image)), s=(image_height, image_width))).real
+    image_width, image_height = whole_image.shape
+    result = np.fft.ifft2(np.fft.fft2(whole_image) * np.fft.fft2(np.rot90(np.rot90(searched_image)), s=(image_width, image_height))).real
     result /= np.abs(np.max(result))
     return result
 
 def highlight_pattern(np_image_array, corr, certainty, highlight_size, pattern_name, locations):
 
     pattern_mask_pwd =f"font_mask/{pattern_name}.png"
-    letter_mask = cv2.cvtColor(cv2.imread(pattern_mask_pwd), cv2.COLOR_BGR2GRAY)
+    letter_mask = to_grayscale(cv2.imread(pattern_mask_pwd), False)
     new_np_image_array = copy(np_image_array)
 
     found_locations = []
@@ -67,72 +69,98 @@ def detect_space(locations):
 
         type, _, _, _ = locations[i+1]
         filename = "font/" + type + ".png"
-        pattern_size = to_grayscale(image=Image.open(os.path.join(filename)), inv=True).size
+        pattern_size = to_grayscale(image=cv2.imread(os.path.join(filename)), inv=True).shape
 
-        if xses[i+1] - xses[i] - pattern_size[0] > 0:
-            locations.append((' ', xses[i+1]-pattern_size[0], 0, 1))
+        if xses[i+1] - xses[i] - pattern_size[1] > 0:
+            locations.append((' ', xses[i+1]-pattern_size[1], 0, 1))
 
-def ocr(ocr_filename, inv):
+def ocr(ocr_filename, inv, save_preprocessing_data = False):
 
     locations = []
 
-    whole_in_grey = np.array(to_grayscale(image=Image.open(os.path.join(ocr_filename)), inv=inv))
+    whole_in_grey = np.array(to_grayscale(image=cv2.imread(os.path.join(ocr_filename)), inv=inv))
 
-    alphabet = np.array(to_grayscale(image=Image.open(os.path.join("alphabet_27.png")), inv=True))
+    alphabet = np.array(to_grayscale(image=cv2.imread(os.path.join("font/alphabet_27.png")), inv=True))
 
     combined_image = cv2.vconcat([whole_in_grey, alphabet])
 
     cv2.imwrite("overlayed_image.png", combined_image)
 
-    alphabet_best = ['r', 'a', 'b', 'd', 'e', 'f', 'g', 'k', 'p', 'q', 's', 't', 'w', 'x', 'y', 'z', 'c', 'v', 'h', 'l', 'm', 'n', 'u', 'o', 'j', 'i']
+    if save_preprocessing_data:
+        os.makedirs("preprocessed_data", exist_ok=True)
+        cv2.imwrite("preprocessed_data/overlayed_image.png", combined_image)
+
+    alphabet_best = [
+        'r',
+        'a',
+        'b',
+        'd',
+        'e',
+        'f',
+        'g',
+        'k',
+        'p',
+        'q',
+        's',
+        't',
+        'w',
+        'x',
+        'y',
+        'z',
+        'c',
+        'v',
+        'h',
+        'l',
+        'm',
+        'n',
+        'u',
+        'o',
+        'j',
+        'i'
+    ]
+
+    certainties = {
+        'a': 0.93,
+        'b': 0.93,
+        'c': 0.93,
+        'd': 0.93,
+        'e': 0.93,
+        'f': 0.92,
+        'g': 0.93,
+        'h': 0.93,
+        'i': 0.95,
+        'j': 0.93,
+        'k': 0.93,
+        'l': 0.90,
+        'm': 0.95,
+        'n': 0.93,
+        'o': 0.93,
+        'p': 0.93,
+        'q': 0.93,
+        'r': 0.93,
+        's': 0.87,
+        't': 0.95,
+        'u': 0.93,
+        'v': 0.89,
+        'w': 0.93,
+        'x': 0.93,
+        'y': 0.90,
+        'z': 0.93,
+    }
 
     for char in alphabet_best:
 
-        whole = Image.open(os.path.join("overlayed_image.png"))
+        whole = to_grayscale(cv2.imread(os.path.join("overlayed_image.png")), inv=inv)
 
         filename = "font/" + char + ".png"
 
-        pattern = to_grayscale(image=Image.open(os.path.join(filename)), inv=True)
+        pattern = to_grayscale(image=cv2.imread(os.path.join(filename)), inv=True)
 
-        if char == 'g' or char == 'f':
-            a = 1
+        highlight_pattern(np_image_array=np.asarray(whole),
+                          corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=certainties[char],
+                          highlight_size=(8, 8), pattern_name=char, locations=locations)
 
-        if char == 'f':
-            highlight_pattern(np_image_array=np.asarray(whole),
-                              corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=0.92,
-                              highlight_size=(8, 8), pattern_name=char, locations=locations)
-        elif char == 'l':
-            highlight_pattern(np_image_array=np.asarray(whole),
-                              corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=0.90,
-                              highlight_size=(8, 8), pattern_name=char, locations=locations)
-        elif char == 'i':
-            highlight_pattern(np_image_array=np.asarray(whole),
-                              corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=0.95,
-                              highlight_size=(8, 8), pattern_name=char, locations=locations)
-        elif char == 't':
-            highlight_pattern(np_image_array=np.asarray(whole),
-                              corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=0.95,
-                              highlight_size=(8, 8), pattern_name=char, locations=locations)
-        elif char == 's':
-            highlight_pattern(np_image_array=np.asarray(whole),
-                              corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=0.87,
-                              highlight_size=(8, 8), pattern_name=char, locations=locations)
-        elif char == 'm':
-            highlight_pattern(np_image_array=np.asarray(whole),
-                              corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=0.95,
-                              highlight_size=(8, 8), pattern_name=char, locations=locations)
-        elif char == 'v':
-            highlight_pattern(np_image_array=np.asarray(whole),
-                              corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=0.89,
-                              highlight_size=(8, 8), pattern_name=char, locations=locations)
-        elif char == 'y':
-            highlight_pattern(np_image_array=np.asarray(whole),
-                              corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=0.90,
-                              highlight_size=(8, 8), pattern_name=char, locations=locations)
-        else:
-            highlight_pattern(np_image_array=np.asarray(whole),
-                              corr=correlation(whole_image=to_grayscale(whole), searched_image=pattern), certainty=0.93,
-                              highlight_size=(8, 8), pattern_name=char, locations=locations)
+    os.remove("overlayed_image.png")
 
     locations.sort(key=lambda x: x[1])
 
@@ -147,4 +175,5 @@ def ocr(ocr_filename, inv):
     string = ""
     for name, _, _, _ in locations:
         string += name
-    print(string)
+
+    return string

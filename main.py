@@ -1,16 +1,20 @@
 import cv2
 import os
-from PIL import Image, ImageOps
 import numpy as np
 
-import ocr
+from ocr import ocr
 
 def to_grayscale(image, inv=False):
-    if image.mode != 'L':
-        image = image.convert('L')
+
+    if len(image.shape) == 2:
+        gray_image = image
+    else:
+        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
     if inv:
-        image = ImageOps.invert(image)
-    return image
+        gray_image = 255 - gray_image
+
+    return gray_image
 
 def check_if_line_starts(np_array_image):
     if np_array_image is None:
@@ -26,14 +30,11 @@ def chop_off_the_line(np_array_image):
         return None, None
     return np_array_image[first_black_line:first_black_line + 32], np_array_image[first_black_line + 32:np_array_image.shape[0]]
 
-lines = 0
-
 def chop_all_lines(np_array_image):
     i = 0
     if check_if_line_starts(np_array_image):
         chopped_line, rest_of_image = chop_off_the_line(np_array_image)
-        cv2.imwrite("chopped0.png", chopped_line)
-        cv2.imwrite("rest.png", rest_of_image)
+        cv2.imwrite("lines/chopped0.png", chopped_line)
         i += 1
     else:
         print("This is a blank")
@@ -42,20 +43,18 @@ def chop_all_lines(np_array_image):
         chopped_line, rest_of_image = chop_off_the_line(rest_of_image)
 
         if chopped_line is not None and chopped_line.size > 0:
-            cv2.imwrite(f"chopped{i}.png", chopped_line)
-
-        if rest_of_image is not None and rest_of_image.size > 0:
-            cv2.imwrite("rest.png", rest_of_image)
+            cv2.imwrite(f"lines/chopped{i}.png", chopped_line)
 
         i += 1
 
-    lines = i
+    return i
 
-    return lines
+image = cv2.imread(os.path.join("images/edison.png"))
 
-image = Image.open(os.path.join("images/luther_king.png"))
-
-lines = chop_all_lines(np.asarray(to_grayscale(image, inv=True)), lines)
+lines = chop_all_lines(np.asarray(to_grayscale(image, inv=True)))
 
 for i in range(lines):
-    ocr.ocr("chopped" + str(i) + ".png", inv=False)
+
+    filename = "lines/chopped" + str(i) + ".png"
+
+    print(ocr(filename, inv=False, save_preprocessing_data=True))
